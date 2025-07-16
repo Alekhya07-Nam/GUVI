@@ -1,7 +1,17 @@
 package HospitalManagementSystem;
 
 import java.sql.*;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.Scanner;
+
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+import java.awt.*;
+
 
 public class HospitalManagementSystem {
     private static final String url = "jdbc:mysql://localhost:3306/hospital";
@@ -50,7 +60,7 @@ public class HospitalManagementSystem {
                         doctor.searchDoctorGUI();
                         break;
                     case 6:
-                        bookAppointment(patient, doctor, connection, scanner);
+                       showAppointmentPopup(patient, doctor, connection);
                         break;
                     case 7:
                         System.out.println("THANK YOU! FOR USING HOSPITAL MANAGEMENT SYSTEM!!");
@@ -66,38 +76,84 @@ public class HospitalManagementSystem {
         }
     }
 
-    public static void bookAppointment(Patient patient, Doctor doctor, Connection connection, Scanner scanner) {
-        System.out.print("Enter Patient Id: ");
-        int patientId = scanner.nextInt();
-        System.out.print("Enter Doctor Id: ");
-        int doctorId = scanner.nextInt();
-        System.out.print("Enter appointment date (YYYY-MM-DD): ");
-        String appointmentDate = scanner.next();
+    public static void showAppointmentPopup(Patient patient, Doctor doctor, Connection connection) {
+        JFrame frame = new JFrame("Book Appointment");
+        frame.setSize(350, 250);
+        frame.setLayout(new GridLayout(5, 2, 10, 10));
+        frame.setLocationRelativeTo(null);
 
-        if (patient.getPatientById(patientId) && doctor.getDoctorById(doctorId)) {
-            if (checkDoctorAvailability(doctorId, appointmentDate, connection)) {
-                String appointmentQuery = "INSERT INTO appointments(patient_id, doctor_id, appointment_date) VALUES(?, ?, ?)";
+        JTextField patientIdField = new JTextField();
+        JTextField doctorIdField = new JTextField();
+        JTextField dateField = new JTextField();
+
+        frame.add(new JLabel("Patient ID:"));
+        frame.add(patientIdField);
+        frame.add(new JLabel("Doctor ID:"));
+        frame.add(doctorIdField);
+        frame.add(new JLabel("Appointment Date (YYYY-MM-DD):"));
+        frame.add(dateField);
+
+        JButton bookButton = new JButton("Book");
+        frame.add(new JLabel());
+        frame.add(bookButton);
+
+        bookButton.addActionListener(e -> {
+            try {
+                int patientId = Integer.parseInt(patientIdField.getText().trim());
+                int doctorId = Integer.parseInt(doctorIdField.getText().trim());
+                String appointmentDateStr = dateField.getText().trim();
+                LocalDate appointmentDate;
                 try {
-                    PreparedStatement preparedStatement = connection.prepareStatement(appointmentQuery);
-                    preparedStatement.setInt(1, patientId);
-                    preparedStatement.setInt(2, doctorId);
-                    preparedStatement.setString(3, appointmentDate);
-                    int rowsAffected = preparedStatement.executeUpdate();
-                    if (rowsAffected > 0) {
-                        System.out.println("Appointment Booked!");
-                    } else {
-                        System.out.println("Failed to Book Appointment!");
+                    appointmentDate = LocalDate.parse(appointmentDateStr);
+                    if (appointmentDate.isBefore(LocalDate.now())) {
+                        JOptionPane.showMessageDialog(frame, "Appointment date cannot be in the past.");
+                        return;
                     }
-                } catch (SQLException e) {
-                    e.printStackTrace();
+                } catch (DateTimeParseException ex) {
+                    JOptionPane.showMessageDialog(frame, "Invalid date format! Use YYYY-MM-DD.");
+                    return;
                 }
-            } else {
-                System.out.println("Doctor not available on this date!!");
+                if (!patient.getPatientById(patientId)) {
+                    JOptionPane.showMessageDialog(frame, "Patient ID does not exist.");
+                    return;
+                }
+                if (!doctor.getDoctorById(doctorId)) {
+                    JOptionPane.showMessageDialog(frame, "Doctor ID does not exist.");
+                    return;
+                }
+                if (!checkDoctorAvailability(doctorId, appointmentDateStr, connection)) {
+                    JOptionPane.showMessageDialog(frame, "Doctor already has an appointment on this date.");
+                    return;
+                }
+                if (!checkPatientAvailability(patientId, appointmentDateStr, connection)) {
+                    JOptionPane.showMessageDialog(frame, "Patient already has an appointment on this date.");
+                    return;
+                }
+                String query = "INSERT INTO appointments(patient_id, doctor_id, appointment_date) VALUES(?, ?, ?)";
+                PreparedStatement stmt = connection.prepareStatement(query);
+                stmt.setInt(1, patientId);
+                stmt.setInt(2, doctorId);
+                stmt.setString(3, appointmentDateStr);
+                int rows = stmt.executeUpdate();
+                if (rows > 0) {
+                    JOptionPane.showMessageDialog(frame, "Appointment Booked Successfully!");
+                    frame.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Failed to book appointment.");
+                }
+
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(frame, "Please enter valid numeric IDs.");
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(frame, "Database error occurred.");
             }
-        } else {
-            System.out.println("Either doctor or patient doesn't exist!!!");
-        }
+        });
+
+        frame.setVisible(true);
     }
+
+ 
 
     public static boolean checkDoctorAvailability(int doctorId, String appointmentDate, Connection connection) {
         String query = "SELECT COUNT(*) FROM appointments WHERE doctor_id = ? AND appointment_date = ?";
@@ -115,4 +171,21 @@ public class HospitalManagementSystem {
         }
         return false;
     }
+
+public static boolean checkPatientAvailability(int patientId, String appointmentDate, Connection connection) {
+        String query = "SELECT COUNT(*) FROM appointments WHERE patient_id = ? AND appointment_date = ?";
+        try {
+            PreparedStatement stmt = connection.prepareStatement(query);
+            stmt.setInt(1, patientId);
+            stmt.setString(2, appointmentDate);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) == 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
 }
