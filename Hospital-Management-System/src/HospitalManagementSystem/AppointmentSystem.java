@@ -181,7 +181,7 @@ public String viewAppointments(Connection conn, String patientName) {
         String sql = "SELECT p.name AS patient_name, d.doctor_name, a.appointment_date " +
                      "FROM appointments a " +
                      "JOIN patients p ON a.patient_id = p.id " +
-                     "JOIN doctors d ON a.doctor_id = d.doctor_id " +
+                     "JOIN doctors d ON a.doctor_id = d.id " +
                      "WHERE p.id = ? " +
                      "ORDER BY a.appointment_date ASC";
 

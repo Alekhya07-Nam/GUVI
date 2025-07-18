@@ -87,6 +87,7 @@ public class HospitalManagementSystem {
                 createButton("Search Doctor", "https://cdn-icons-png.flaticon.com/512/3031/3031293.png"),
                 createButton("Book Appointment", "https://cdn-icons-png.flaticon.com/512/747/747310.png"),
                  createButton("View Appointment", "https://cdn-icons-png.flaticon.com/512/747/747310.png"),
+                  createButton("Ask Suggestions", "https://cdn-icons-png.flaticon.com/512/747/747310.png"),
                 createButton("Exit", "https://cdn-icons-png.flaticon.com/512/1828/1828479.png")
             };
 
@@ -105,6 +106,13 @@ public class HospitalManagementSystem {
             buttons[3].addActionListener(e -> doctor.addDoctorGUI());
             buttons[4].addActionListener(e -> doctor.searchDoctorGUI());
             buttons[5].addActionListener(e -> showAppointmentPopup(patient, doctor, connection));
+   buttons[7].addActionListener(e -> {
+    new SymptomSuggestion(); 
+});
+
+
+
+
           buttons[6].addActionListener(e -> {
     String patientName = JOptionPane.showInputDialog(null, "Enter Patient Name:");
     if (patientName != null && !patientName.trim().isEmpty()) {
@@ -116,7 +124,7 @@ public class HospitalManagementSystem {
     }
 });
 
-            buttons[7].addActionListener((ActionEvent e) -> {
+            buttons[8].addActionListener((ActionEvent e) -> {
                 JOptionPane.showMessageDialog(frame, "Thank you for using the Hospital Management System!");
                 frame.dispose();
             });
